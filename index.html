@@ -1,0 +1,181 @@
+<html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Procesador de Transacciones</title>
+        <!-- Tailwind CSS CDN para estilizado rápido -->
+        <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+        <!-- Google Fonts para 'Inter' -->
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+        <style>
+            /* Aseguramos que la aplicación Electron ocupe el 100% de la ventana */
+            html, body {
+                height: 100%;
+                margin: 0;
+                padding: 0;
+                font-family: 'Inter', sans-serif;
+                overflow: hidden; /* Evitar scroll de la ventana principal */
+            }
+            .container {
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                background-color: #f3f4f6; /* bg-gray-100 */
+                padding: 20px;
+            }
+            .panel {
+                background-color: #ffffff;
+                border-radius: 12px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                padding: 32px;
+                width: 100%;
+                max-width: 600px;
+                text-align: center;
+            }
+            /* Estilos para los mensajes */
+            .message-box {
+                margin-top: 20px;
+                padding: 12px;
+                border-radius: 8px;
+                font-weight: 500;
+                text-align: left;
+                word-wrap: break-word; /* Para asegurar que el texto largo se rompa */
+                max-height: 180px; /* Limitar la altura del mensaje */
+                overflow-y: auto; /* Scroll si el mensaje es muy largo */
+            }
+            .message-box.success {
+                background-color: #d1fae5; /* bg-green-100 */
+                color: #065f46; /* text-green-800 */
+            }
+            .message-box.error {
+                background-color: #fee2e2; /* bg-red-100 */
+                color: #991b1b; /* text-red-800 */
+            }
+            .message-box.info {
+                background-color: #e0e7ff; /* bg-indigo-100 */
+                color: #4338ca; /* text-indigo-700 */
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="panel">
+                <!-- Logo eliminado según la solicitud -->
+                <h1 class="text-3xl font-bold mb-8" style="color: #0A1D56;">PROCESAR TRANSACCIONES</h1>
+
+                <div class="mb-6">
+                    <!-- Ajustado el margen horizontal (px-4) y color de las instrucciones -->
+                    <label class="block text-sm font-bold mb-4 text-center px-4" style="color: #555555;">
+                        Instrucciones: Selecione primero el archivo a cargar, luego cliquee en el botón de "Cargar Datos" y espere la confirmación.
+                    </label>
+                    <div class="flex flex-col items-center justify-center">
+                        <!-- Color del botón y texto ajustados -->
+                        <button type="button" id="selectFileButton" class="px-4 py-2 rounded-md font-semibold hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-gray-400 transition mb-2" style="background-color: #C9C9C9; color: #272727;">Seleccionar archivo</button>
+                        <!-- Color del texto del nombre del archivo ajustado -->
+                        <span id="selectedFileName" class="text-sm italic text-center" style="color: #272727;">Ningun archivo seleccionado</span>
+                    </div>
+                    <input type="file" id="hiddenCsvFileInput" accept=".csv" style="display: none;">
+                </div>
+
+                <button id="processButton"
+                        class="w-full px-6 py-3 rounded-md bg-indigo-600 text-white font-bold text-lg
+                               hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500
+                               transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">
+                    Cargar datos
+                </button>
+
+                <div id="statusMessage" class="message-box hidden">
+                    <!-- Mensajes de estado se mostrarán aquí -->
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // Este script se ejecuta en el proceso de renderizado (tu ventana de Electron)
+            // y se comunica con el proceso principal a través de la API expuesta en preload.ts.
+
+            const processButton = document.getElementById('processButton');
+            const statusMessageDiv = document.getElementById('statusMessage');
+            const selectFileButton = document.getElementById('selectFileButton');
+            const hiddenCsvFileInput = document.getElementById('hiddenCsvFileInput');
+            const selectedFileName = document.getElementById('selectedFileName');
+
+            let selectedFileContent = null; // Almacenará el contenido del CSV
+
+            /**
+             * @function showStatusMessage
+             * @description Muestra un mensaje de estado en la interfaz de usuario.
+             * @param message El texto del mensaje.
+             * @param type El tipo de mensaje ('success', 'error', 'info').
+             */
+            function showStatusMessage(message, type) {
+                statusMessageDiv.textContent = message;
+                statusMessageDiv.className = `message-box ${type}`;
+                statusMessageDiv.classList.remove('hidden');
+            }
+
+            // --- Evento de Selección de Archivo ---
+            selectFileButton.addEventListener('click', () => {
+                hiddenCsvFileInput.value = '';
+                hiddenCsvFileInput.click();
+            });
+
+            hiddenCsvFileInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    selectedFileName.textContent = file.name;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        selectedFileContent = e.target.result;
+                        processButton.disabled = false; // Habilitar el botón cuando hay un archivo
+                        showStatusMessage('Si el archivo es correcto, presione el botón "Cargar datos" para procesar.', 'info');
+                    };
+                    reader.onerror = () => {
+                        selectedFileContent = null;
+                        processButton.disabled = true;
+                        showStatusMessage('Error al leer el archivo.', 'error');
+                        selectedFileName.textContent = 'Error al leer el archivo.';
+                    };
+                    reader.readAsText(file); // Leer el archivo como texto
+                } else {
+                    selectedFileName.textContent = 'Sin archivos seleccionados';
+                    processButton.disabled = true;
+                    showStatusMessage('Por favor, selecciona un archivo CSV.', 'info');
+                }
+            });
+
+            // --- Evento de Procesar CSV ---
+            processButton.addEventListener('click', () => {
+                if (!selectedFileContent) {
+                    showStatusMessage('No hay ningún archivo CSV para procesar.', 'error');
+                    return;
+                }
+
+                processButton.disabled = true; // Deshabilitar el botón durante el procesamiento
+                showStatusMessage('Procesando transacciones... Por favor, espera.', 'info');
+
+                // Envía el contenido del CSV al proceso principal a través de la API de Electron
+                // 'window.electronAPI' es expuesto por preload.ts
+                window.electronAPI.sendCsvContent(selectedFileContent);
+            });
+
+            // --- Escuchar Resultados del Procesamiento del Main Process ---
+            // 'window.electronAPI.onProcessingResult' es expuesto por preload.ts
+            window.electronAPI.onProcessingResult((result) => {
+                if (result.success) {
+                    showStatusMessage(result.message, 'success');
+                } else {
+                    showStatusMessage(result.message + (result.details ? `\nDetalles: ${result.details}` : ''), 'error');
+                }
+                processButton.disabled = false; // Habilitar el botón de nuevo
+            });
+
+            // --- Inicialización ---
+            // Deshabilitar el botón de procesamiento al cargar la página si no hay archivo
+            processButton.disabled = true;
+
+        </script>
+    </body>
+</html>

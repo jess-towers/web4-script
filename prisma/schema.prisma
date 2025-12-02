@@ -1,0 +1,75 @@
+// Tortuga/backend/prisma/schema.prisma
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["windows", "linux-musl"]
+  
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement()) // Clave primaria autoincremental
+  email     String   @unique // Correo electrónico único, usado para login
+  nickname  String   @unique // Nombre de usuario o apodo único para mostrar
+  password  String   // Contraseña (IMPORTANTE: siempre hasheada en la DB)
+  role      String   @default("user") // Rol del usuario (ej. "admin", "user")
+  createdAt DateTime @default(now()) // Fecha de creación (automática)
+  updatedAt DateTime @updatedAt // Fecha de última actualización (automática)
+
+  // Añadimos la relación inversa
+  userPointOfSales UserPointOfSale[]
+}
+
+model PointOfSale {
+  // Renombramos 'id' a 'pointNumberId' y lo hacemos la nueva clave primaria.
+  // Este es el "N° de Punto de Venta" que viene del CSV.
+  pointNumberId Int      @id @unique // N° de Punto de Venta como ID y único
+  name          String   @unique
+  location      String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relaciones inversas (actualizadas para referenciar pointNumberId)
+  dailySales       DailySales[]
+  userPointOfSales UserPointOfSale[]
+}
+
+model DailySales {
+  id                 Int      @id @default(autoincrement())
+  pointOfSaleId      Int      // <-- Ahora referencia PointOfSale.pointNumberId
+  date               DateTime @db.Date // Formato solo fecha, como querías
+  totalTransactionsCount Int @default(0)
+  validTransactionsCount Int @default(0)
+  qrSales            Float    @default(0)
+  debitSales         Float    @default(0)
+  creditSales        Float    @default(0)
+  totalSales         Float    @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  // Relación con PointOfSale: 'pointNumberId' en PointOfSale es ahora la clave de referencia
+  pointOfSale        PointOfSale @relation(fields: [pointOfSaleId], references: [pointNumberId]) // <-- REFERENCIA CAMBIADA
+
+  @@unique([pointOfSaleId, date]) // La unicidad por PV y fecha. El name: "unique_pv_date" es opcional.
+}
+
+model UserPointOfSale {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  pointOfSaleId Int      // <-- Ahora referencia PointOfSale.pointNumberId
+  assignedAt    DateTime @default(now())
+
+  // Relaciones
+  user        User        @relation(fields: [userId], references: [id])
+  pointOfSale PointOfSale @relation(fields: [pointOfSaleId], references: [pointNumberId]) // <-- REFERENCIA CAMBIADA
+
+  @@unique([userId, pointOfSaleId]) // Restricción de unicidad para la asignación
+}
+
