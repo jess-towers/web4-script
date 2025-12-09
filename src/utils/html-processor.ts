@@ -35,15 +35,38 @@ function parseDateString(dateString: string): Date | null {
   if (parts.length !== 3) return null;
   
   const day = parseInt(parts[0], 10);
-  const month = parseInt(parts[1], 10) - 1; // Meses son 0-indexados en JS
+  const monthRaw = parseInt(parts[1], 10); // Mes original (1-12)
   const year = parseInt(parts[2], 10);
   
-  if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
+  // Validar que todos los valores sean números válidos
+  if (isNaN(day) || isNaN(monthRaw) || isNaN(year)) return null;
+  
+  // Validar que el mes esté en el rango válido (1-12) ANTES de ajustar
+  if (monthRaw < 1 || monthRaw > 12) return null;
+  
+  // Validar que el día esté en un rango razonable (1-31)
+  if (day < 1 || day > 31) return null;
+  
+  // Validar que el año sea razonable (por ejemplo, entre 1900 y 2100)
+  if (year < 1900 || year > 2100) return null;
+  
+  // Convertir mes a formato 0-indexado de JavaScript
+  const month = monthRaw - 1;
   
   const parsedDate = new Date(year, month, day);
+  
+  // Validación final: verificar que la fecha creada sea válida
+  // (esto captura casos como 31/02/2025 que se ajustarían incorrectamente)
   if (isNaN(parsedDate.getTime())) {
     return null;
   }
+  
+  // Verificar que la fecha parseada coincida con los valores originales
+  // (esto previene que Date ajuste automáticamente fechas inválidas)
+  if (parsedDate.getDate() !== day || parsedDate.getMonth() !== month || parsedDate.getFullYear() !== year) {
+    return null;
+  }
+  
   return parsedDate;
 }
 
@@ -163,24 +186,20 @@ export async function processHtmlCsvData(htmlContent: string): Promise<Aggregate
   for (let rowIndex = 0; rowIndex < tableRows.length; rowIndex++) {
     const row = tableRows[rowIndex];
     
-    // Extraer celdas (td o th)
+    // Extraer celdas (td o th) - SOLO hijos directos para evitar incluir celdas de tablas anidadas
     const cells: any[] = [];
     
-    function extractCells(element: any) {
-      if (!element) return;
-      
-      if (element.name === 'td' || element.name === 'th') {
-        cells.push(element);
-      }
-      
-      if (element.children) {
-        for (const child of element.children) {
-          extractCells(child);
+    // Solo procesar hijos directos de la fila, no descendientes profundos
+    // Esto previene que se incluyan celdas de tablas anidadas que desplazarían los índices
+    if (row.children && row.children.length > 0) {
+      for (const child of row.children) {
+        // Solo agregar si es una celda directa (td o th)
+        if (child.name === 'td' || child.name === 'th') {
+          cells.push(child);
         }
+        // NO buscar recursivamente en hijos para evitar capturar celdas de tablas anidadas
       }
     }
-    
-    extractCells(row);
     
     // Necesitamos al menos 8 columnas (índices 0-7, necesitamos 1, 4, 5, 7)
     if (cells.length < 8) {
