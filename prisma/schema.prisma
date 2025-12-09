@@ -50,6 +50,7 @@ model DailySales {
   qrSales            Float    @default(0)
   debitSales         Float    @default(0)
   creditSales        Float    @default(0)
+  trxSales           Float    @default(0)
   totalSales         Float    @default(0)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt

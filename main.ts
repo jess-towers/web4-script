@@ -14,6 +14,7 @@ if (app.isPackaged) {
 
 import { prisma, disconnectPrisma } from './src/config/prisma-client'; // Usar la nueva configuración
 import { processCsvData } from './src/utils/csv-aggregator'; // Tu lógica de agregación
+import { processHtmlCsvData } from './src/utils/html-processor'; // Procesador HTML para archivos Banco
 
 let mainWindow: BrowserWindow | null;
 
@@ -174,5 +175,141 @@ ipcMain.on('process-csv', async (event, csvContent: string) => {
     }
   } finally {
     event.sender.send('processing-result', result);
+  }
+});
+
+/**
+ * @function handleProcessHtmlCsv
+ * @description Maneja la petición de procesamiento de HTML CSV (formato Banco) desde la UI.
+ * Realiza validaciones estrictas y inserción transaccional atómica en la BD.
+ */
+ipcMain.on('process-html-csv', async (event, htmlContent: string) => {
+  console.log('Received HTML CSV content for processing.');
+
+  let result: { success: boolean; message: string; details?: string } = {
+    success: false,
+    message: 'Ocurrió un error inesperado antes de la asignación del resultado.'
+  };
+
+  try {
+    // Procesar el HTML y obtener datos agregados
+    const aggregatedData = await processHtmlCsvData(htmlContent);
+    console.log(`Aggregated ${aggregatedData.length} DailySales records from HTML.`);
+
+    if (aggregatedData.length === 0) {
+      result = {
+        success: false,
+        message: 'No se encontraron datos válidos para procesar en el archivo.'
+      };
+      event.sender.send('html-processing-result', result);
+      return;
+    }
+
+    // VALIDACIÓN 1: Existencia de PDV (BLOQUEANTE)
+    const uniquePoSIds = new Set(aggregatedData.map(data => data.pointOfSaleId));
+    
+    const existingPoS = await prisma.pointOfSale.findMany({
+      where: {
+        pointNumberId: {
+          in: Array.from(uniquePoSIds)
+        }
+      },
+      select: {
+        pointNumberId: true
+      }
+    });
+
+    const existingPoSIds = new Set(existingPoS.map(pos => pos.pointNumberId));
+    const nonExistingPoS = Array.from(uniquePoSIds).filter(id => !existingPoSIds.has(id));
+
+    if (nonExistingPoS.length > 0) {
+      result = {
+        success: false,
+        message: `Error: Los siguientes PDVs no están registrados: ${nonExistingPoS.join(', ')}. Ningún dato será insertado.`
+      };
+      console.warn(result.message);
+      if (mainWindow) {
+        dialog.showErrorBox('PDVs no registrados', result.message);
+      }
+      event.sender.send('html-processing-result', result);
+      return;
+    }
+
+    // VALIDACIÓN 2: Duplicados (BLOQUEANTE)
+    const existing = await prisma.dailySales.findMany({
+      where: {
+        OR: aggregatedData.map(data => ({
+          pointOfSaleId: data.pointOfSaleId,
+          date: data.date,
+        }))
+      },
+      select: { pointOfSaleId: true, date: true }
+    });
+
+    if (existing.length > 0) {
+      const duplicados = existing.map(e => {
+        const year = e.date.getUTCFullYear();
+        const month = String(e.date.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(e.date.getUTCDate()).padStart(2, '0');
+        const formattedDate = `${year}-${month}-${day}`;
+        return `PDV: ${e.pointOfSaleId}, Fecha: ${formattedDate}`;
+      }).join(' | ');
+      result = {
+        success: false,
+        message: `Error: Ya existen registros en la base de datos para las siguientes combinaciones de PDV y Fecha:\n${duplicados}\n\nEl proceso ha sido cancelado para evitar duplicados.`
+      };
+      console.warn(result.message);
+      if (mainWindow) {
+        dialog.showErrorBox('Registros duplicados', result.message);
+      }
+      event.sender.send('html-processing-result', result);
+      return;
+    }
+
+    // INSERCIÓN ATÓMICA (All-or-Nothing) usando transacción
+    // Usamos createMany para mejor rendimiento y timeout extendido para grandes volúmenes
+    await prisma.$transaction(
+      async (tx) => {
+        await tx.dailySales.createMany({
+          data: aggregatedData.map(data => ({
+            pointOfSaleId: data.pointOfSaleId,
+            date: data.date,
+            totalTransactionsCount: data.totalTransactionsCount,
+            validTransactionsCount: data.validTransactionsCount,
+            qrSales: data.qrSales,
+            debitSales: data.debitSales,
+            creditSales: 0, // Siempre 0 para este flujo
+            trxSales: data.trxSales || 0, // Nueva columna para transferencias
+            totalSales: data.totalSales,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          })),
+          skipDuplicates: false, // No permitir duplicados (la validación ya se hizo arriba)
+        });
+      },
+      {
+        maxWait: 30000, // Esperar hasta 30 segundos para iniciar la transacción
+        timeout: 60000, // Timeout de 60 segundos para completar la transacción
+      }
+    );
+
+    result = { 
+      success: true, 
+      message: `Procesamiento completado con éxito. Se insertaron ${aggregatedData.length} resúmenes diarios.` 
+    };
+    console.log('HTML CSV processing and DB insert successful.');
+
+  } catch (error: any) {
+    console.error('Error durante el procesamiento del HTML CSV o la operación de base de datos:', error);
+    result = {
+      success: false,
+      message: `Error al procesar el archivo: ${error.message || 'Error desconocido.'}`,
+      details: error.stack || 'No hay detalles de stack disponibles.'
+    };
+    if (mainWindow) {
+      dialog.showErrorBox('Error de Procesamiento', result.message);
+    }
+  } finally {
+    event.sender.send('html-processing-result', result);
   }
 });

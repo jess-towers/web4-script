@@ -22,6 +22,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
    */
   onProcessingResult: (callback: (result: { success: boolean; message: string; details?: string }) => void) => {
     ipcRenderer.on('processing-result', (_event, result) => callback(result));
+  },
+
+  /**
+   * Envía el contenido del HTML CSV (formato Banco) al proceso principal para su procesamiento.
+   * @param htmlContent El contenido del archivo HTML CSV como una cadena.
+   */
+  sendHtmlCsvContent: (htmlContent: string) => {
+    ipcRenderer.send('process-html-csv', htmlContent);
+  },
+
+  /**
+   * Escucha los mensajes de resultado del procesamiento del HTML CSV desde el proceso principal.
+   * @param callback Función a ejecutar cuando se recibe un resultado.
+   * Recibe un objeto con { success: boolean, message: string, details?: string }.
+   */
+  onHtmlProcessingResult: (callback: (result: { success: boolean; message: string; details?: string }) => void) => {
+    ipcRenderer.on('html-processing-result', (_event, result) => callback(result));
   }
 });
 

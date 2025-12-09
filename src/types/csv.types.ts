@@ -42,6 +42,7 @@
         qrSales: number;
         debitSales: number;
         creditSales: number;
+        trxSales?: number; // Opcional para compatibilidad con procesador antiguo
         totalSales: number;
         // No incluimos createdAt y updatedAt aquí, ya que Prisma los manejará automáticamente.
       }

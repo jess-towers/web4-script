@@ -57,6 +57,36 @@
                 background-color: #e0e7ff; /* bg-indigo-100 */
                 color: #4338ca; /* text-indigo-700 */
             }
+            /* Estilos para pestañas */
+            .tab-button {
+                padding: 12px 24px;
+                font-weight: 600;
+                cursor: pointer;
+                border: none;
+                background-color: #e5e7eb;
+                color: #6b7280;
+                transition: all 0.2s;
+            }
+            .tab-button.active {
+                background-color: #ffffff;
+                color: #0A1D56;
+                border-bottom: 3px solid #0A1D56;
+            }
+            .tab-button:hover:not(.active) {
+                background-color: #d1d5db;
+            }
+            .tab-content {
+                display: none;
+            }
+            .tab-content.active {
+                display: block;
+            }
+            .tabs-container {
+                display: flex;
+                gap: 0;
+                margin-bottom: 24px;
+                border-bottom: 2px solid #e5e7eb;
+            }
         </style>
     </head>
     <body>
@@ -65,29 +95,63 @@
                 <!-- Logo eliminado según la solicitud -->
                 <h1 class="text-3xl font-bold mb-8" style="color: #0A1D56;">PROCESAR TRANSACCIONES</h1>
 
-                <div class="mb-6">
-                    <!-- Ajustado el margen horizontal (px-4) y color de las instrucciones -->
-                    <label class="block text-sm font-bold mb-4 text-center px-4" style="color: #555555;">
-                        Instrucciones: Selecione primero el archivo a cargar, luego cliquee en el botón de "Cargar Datos" y espere la confirmación.
-                    </label>
-                    <div class="flex flex-col items-center justify-center">
-                        <!-- Color del botón y texto ajustados -->
-                        <button type="button" id="selectFileButton" class="px-4 py-2 rounded-md font-semibold hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-gray-400 transition mb-2" style="background-color: #C9C9C9; color: #272727;">Seleccionar archivo</button>
-                        <!-- Color del texto del nombre del archivo ajustado -->
-                        <span id="selectedFileName" class="text-sm italic text-center" style="color: #272727;">Ningun archivo seleccionado</span>
-                    </div>
-                    <input type="file" id="hiddenCsvFileInput" accept=".csv" style="display: none;">
+                <!-- Sistema de Pestañas -->
+                <div class="tabs-container">
+                    <button type="button" id="tabCsvButton" class="tab-button active">Carga CSV</button>
+                    <button type="button" id="tabHtmlButton" class="tab-button">Carga Banco</button>
                 </div>
 
-                <button id="processButton"
-                        class="w-full px-6 py-3 rounded-md bg-indigo-600 text-white font-bold text-lg
-                               hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500
-                               transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">
-                    Cargar datos
-                </button>
+                <!-- Pestaña 1: Carga CSV (Original) -->
+                <div id="tab-csv" class="tab-content active">
+                    <div class="mb-6">
+                        <!-- Ajustado el margen horizontal (px-4) y color de las instrucciones -->
+                        <label class="block text-sm font-bold mb-4 text-center px-4" style="color: #555555;">
+                            Instrucciones: Selecione primero el archivo a cargar, luego cliquee en el botón de "Cargar Datos" y espere la confirmación.
+                        </label>
+                        <div class="flex flex-col items-center justify-center">
+                            <!-- Color del botón y texto ajustados -->
+                            <button type="button" id="selectFileButton" class="px-4 py-2 rounded-md font-semibold hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-gray-400 transition mb-2" style="background-color: #C9C9C9; color: #272727;">Seleccionar archivo</button>
+                            <!-- Color del texto del nombre del archivo ajustado -->
+                            <span id="selectedFileName" class="text-sm italic text-center" style="color: #272727;">Ningun archivo seleccionado</span>
+                        </div>
+                        <input type="file" id="hiddenCsvFileInput" accept=".csv" style="display: none;">
+                    </div>
 
-                <div id="statusMessage" class="message-box hidden">
-                    <!-- Mensajes de estado se mostrarán aquí -->
+                    <button id="processButton"
+                            class="w-full px-6 py-3 rounded-md bg-indigo-600 text-white font-bold text-lg
+                                   hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500
+                                   transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">
+                        Cargar datos
+                    </button>
+
+                    <div id="statusMessage" class="message-box hidden">
+                        <!-- Mensajes de estado se mostrarán aquí -->
+                    </div>
+                </div>
+
+                <!-- Pestaña 2: Carga Banco (Nueva) -->
+                <div id="tab-html" class="tab-content">
+                    <div class="mb-6">
+                        <label class="block text-sm font-bold mb-4 text-center px-4" style="color: #555555;">
+                            Instrucciones: Selecione primero el archivo .xls del banco a cargar, luego cliquee en el botón de "Cargar Datos" y espere la confirmación.
+                        </label>
+                        <div class="flex flex-col items-center justify-center">
+                            <button type="button" id="selectHtmlFileButton" class="px-4 py-2 rounded-md font-semibold hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-gray-400 transition mb-2" style="background-color: #C9C9C9; color: #272727;">Seleccionar archivo</button>
+                            <span id="selectedHtmlFileName" class="text-sm italic text-center" style="color: #272727;">Ningun archivo seleccionado</span>
+                        </div>
+                        <input type="file" id="hiddenHtmlInput" accept=".xls,.xlsx" style="display: none;">
+                    </div>
+
+                    <button id="processHtmlButton"
+                            class="w-full px-6 py-3 rounded-md bg-indigo-600 text-white font-bold text-lg
+                                   hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500
+                                   transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">
+                        Cargar datos
+                    </button>
+
+                    <div id="statusMessageHtml" class="message-box hidden">
+                        <!-- Mensajes de estado se mostrarán aquí -->
+                    </div>
                 </div>
             </div>
         </div>
@@ -96,17 +160,32 @@
             // Este script se ejecuta en el proceso de renderizado (tu ventana de Electron)
             // y se comunica con el proceso principal a través de la API expuesta en preload.ts.
 
+            // ========== ELEMENTOS DE LA PESTAÑA CSV (ORIGINAL) ==========
             const processButton = document.getElementById('processButton');
             const statusMessageDiv = document.getElementById('statusMessage');
             const selectFileButton = document.getElementById('selectFileButton');
             const hiddenCsvFileInput = document.getElementById('hiddenCsvFileInput');
             const selectedFileName = document.getElementById('selectedFileName');
 
+            // ========== ELEMENTOS DE LA PESTAÑA HTML (BANCO) ==========
+            const processHtmlButton = document.getElementById('processHtmlButton');
+            const statusMessageHtmlDiv = document.getElementById('statusMessageHtml');
+            const selectHtmlFileButton = document.getElementById('selectHtmlFileButton');
+            const hiddenHtmlInput = document.getElementById('hiddenHtmlInput');
+            const selectedHtmlFileName = document.getElementById('selectedHtmlFileName');
+
+            // ========== ELEMENTOS DE PESTAÑAS ==========
+            const tabCsvButton = document.getElementById('tabCsvButton');
+            const tabHtmlButton = document.getElementById('tabHtmlButton');
+            const tabCsvContent = document.getElementById('tab-csv');
+            const tabHtmlContent = document.getElementById('tab-html');
+
             let selectedFileContent = null; // Almacenará el contenido del CSV
+            let selectedHtmlFileContent = null; // Almacenará el contenido del HTML CSV
 
             /**
              * @function showStatusMessage
-             * @description Muestra un mensaje de estado en la interfaz de usuario.
+             * @description Muestra un mensaje de estado en la interfaz de usuario (Pestaña CSV).
              * @param message El texto del mensaje.
              * @param type El tipo de mensaje ('success', 'error', 'info').
              */
@@ -116,7 +195,42 @@
                 statusMessageDiv.classList.remove('hidden');
             }
 
-            // --- Evento de Selección de Archivo ---
+            /**
+             * @function showStatusMessageHtml
+             * @description Muestra un mensaje de estado en la interfaz de usuario (Pestaña Banco).
+             * @param message El texto del mensaje.
+             * @param type El tipo de mensaje ('success', 'error', 'info').
+             */
+            function showStatusMessageHtml(message, type) {
+                statusMessageHtmlDiv.textContent = message;
+                statusMessageHtmlDiv.className = `message-box ${type}`;
+                statusMessageHtmlDiv.classList.remove('hidden');
+            }
+
+            /**
+             * @function switchTab
+             * @description Cambia entre pestañas.
+             * @param tabName El nombre de la pestaña a mostrar ('csv' o 'html').
+             */
+            function switchTab(tabName) {
+                if (tabName === 'csv') {
+                    tabCsvButton.classList.add('active');
+                    tabHtmlButton.classList.remove('active');
+                    tabCsvContent.classList.add('active');
+                    tabHtmlContent.classList.remove('active');
+                } else if (tabName === 'html') {
+                    tabCsvButton.classList.remove('active');
+                    tabHtmlButton.classList.add('active');
+                    tabCsvContent.classList.remove('active');
+                    tabHtmlContent.classList.add('active');
+                }
+            }
+
+            // ========== EVENTOS DE PESTAÑAS ==========
+            tabCsvButton.addEventListener('click', () => switchTab('csv'));
+            tabHtmlButton.addEventListener('click', () => switchTab('html'));
+
+            // ========== EVENTOS DE LA PESTAÑA CSV (ORIGINAL) ==========
             selectFileButton.addEventListener('click', () => {
                 hiddenCsvFileInput.value = '';
                 hiddenCsvFileInput.click();
@@ -129,7 +243,7 @@
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         selectedFileContent = e.target.result;
-                        processButton.disabled = false; // Habilitar el botón cuando hay un archivo
+                        processButton.disabled = false;
                         showStatusMessage('Si el archivo es correcto, presione el botón "Cargar datos" para procesar.', 'info');
                     };
                     reader.onerror = () => {
@@ -138,7 +252,7 @@
                         showStatusMessage('Error al leer el archivo.', 'error');
                         selectedFileName.textContent = 'Error al leer el archivo.';
                     };
-                    reader.readAsText(file); // Leer el archivo como texto
+                    reader.readAsText(file);
                 } else {
                     selectedFileName.textContent = 'Sin archivos seleccionados';
                     processButton.disabled = true;
@@ -146,35 +260,79 @@
                 }
             });
 
-            // --- Evento de Procesar CSV ---
             processButton.addEventListener('click', () => {
                 if (!selectedFileContent) {
                     showStatusMessage('No hay ningún archivo CSV para procesar.', 'error');
                     return;
                 }
 
-                processButton.disabled = true; // Deshabilitar el botón durante el procesamiento
+                processButton.disabled = true;
                 showStatusMessage('Procesando transacciones... Por favor, espera.', 'info');
-
-                // Envía el contenido del CSV al proceso principal a través de la API de Electron
-                // 'window.electronAPI' es expuesto por preload.ts
                 window.electronAPI.sendCsvContent(selectedFileContent);
             });
 
-            // --- Escuchar Resultados del Procesamiento del Main Process ---
-            // 'window.electronAPI.onProcessingResult' es expuesto por preload.ts
             window.electronAPI.onProcessingResult((result) => {
                 if (result.success) {
                     showStatusMessage(result.message, 'success');
                 } else {
                     showStatusMessage(result.message + (result.details ? `\nDetalles: ${result.details}` : ''), 'error');
                 }
-                processButton.disabled = false; // Habilitar el botón de nuevo
+                processButton.disabled = false;
             });
 
-            // --- Inicialización ---
-            // Deshabilitar el botón de procesamiento al cargar la página si no hay archivo
+            // ========== EVENTOS DE LA PESTAÑA HTML (BANCO) ==========
+            selectHtmlFileButton.addEventListener('click', () => {
+                hiddenHtmlInput.value = '';
+                hiddenHtmlInput.click();
+            });
+
+            hiddenHtmlInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    selectedHtmlFileName.textContent = file.name;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        selectedHtmlFileContent = e.target.result;
+                        processHtmlButton.disabled = false;
+                        showStatusMessageHtml('Si el archivo es correcto, presione el botón "Cargar datos" para procesar.', 'info');
+                    };
+                    reader.onerror = () => {
+                        selectedHtmlFileContent = null;
+                        processHtmlButton.disabled = true;
+                        showStatusMessageHtml('Error al leer el archivo.', 'error');
+                        selectedHtmlFileName.textContent = 'Error al leer el archivo.';
+                    };
+                    reader.readAsText(file);
+                } else {
+                    selectedHtmlFileName.textContent = 'Sin archivos seleccionados';
+                    processHtmlButton.disabled = true;
+                    showStatusMessageHtml('Por favor, selecciona un archivo.', 'info');
+                }
+            });
+
+            processHtmlButton.addEventListener('click', () => {
+                if (!selectedHtmlFileContent) {
+                    showStatusMessageHtml('No hay ningún archivo para procesar.', 'error');
+                    return;
+                }
+
+                processHtmlButton.disabled = true;
+                showStatusMessageHtml('Procesando transacciones del banco... Por favor, espera.', 'info');
+                window.electronAPI.sendHtmlCsvContent(selectedHtmlFileContent);
+            });
+
+            window.electronAPI.onHtmlProcessingResult((result) => {
+                if (result.success) {
+                    showStatusMessageHtml(result.message, 'success');
+                } else {
+                    showStatusMessageHtml(result.message + (result.details ? `\nDetalles: ${result.details}` : ''), 'error');
+                }
+                processHtmlButton.disabled = false;
+            });
+
+            // ========== INICIALIZACIÓN ==========
             processButton.disabled = true;
+            processHtmlButton.disabled = true;
 
         </script>
     </body>
