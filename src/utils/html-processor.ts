@@ -72,16 +72,32 @@ function parseDateString(dateString: string): Date | null {
 
 /**
  * @function parseMonto
- * @description Parsea una cadena de monto (ej. "85926,02") a un número.
- * Reemplaza la coma por punto para que Number() lo interprete correctamente.
+ * @description Parsea una cadena de monto en formato argentino/europeo (ej. "1.500,50") a un número.
+ * Elimina los puntos de miles y reemplaza la coma decimal por punto.
  * @param montoString La cadena de monto.
  * @returns El monto como número, o NaN si el parseo falla.
  */
 function parseMonto(montoString: string): number {
-  if (!montoString) return NaN;
-  // Reemplaza la coma decimal por un punto y luego parsea a float.
-  const cleaned = montoString.replace(',', '.');
+  if (!montoString || !montoString.trim()) return NaN;
+  // Eliminar todos los puntos (separadores de miles)
+  const withoutThousands = montoString.replace(/\./g, '');
+  // Reemplazar la coma decimal por un punto
+  const cleaned = withoutThousands.replace(',', '.');
   return parseFloat(cleaned);
+}
+
+/**
+ * @function normalizeText
+ * @description Normaliza un texto eliminando tildes y acentos, y convirtiéndolo a mayúsculas.
+ * @param text El texto a normalizar.
+ * @returns El texto normalizado sin tildes y en mayúsculas.
+ */
+function normalizeText(text: string): string {
+  if (!text) return '';
+  return text
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
 }
 
 /**
@@ -237,7 +253,7 @@ export async function processHtmlCsvData(htmlContent: string): Promise<Aggregate
     rows.push({
       fecha: fechaString,
       pdv,
-      concepto: concepto.toUpperCase(),
+      concepto: concepto,
       monto
     });
   }
@@ -279,15 +295,15 @@ export async function processHtmlCsvData(htmlContent: string): Promise<Aggregate
     aggregated.validTransactionsCount++; // Todas las transacciones se consideran válidas en este flujo
 
     // Clasificar según el concepto
-    const conceptoUpper = row.concepto.toUpperCase();
+    const conceptoNorm = normalizeText(row.concepto);
     
-    if (conceptoUpper.includes('OPERACION COBRO QR') || conceptoUpper.includes('QR MAX')) {
+    if (conceptoNorm.includes('OPERACION COBRO QR') || conceptoNorm.includes('QR MAX')) {
       aggregated.qrSales += row.monto;
       aggregated.totalSales += row.monto;
-    } else if (conceptoUpper === 'OPERACION TARJETA DEBITO (PRISMA-WEB)') {
+    } else if (conceptoNorm === 'OPERACION TARJETA DEBITO (PRISMA-WEB)') {
       aggregated.debitSales += row.monto;
       aggregated.totalSales += row.monto;
-    } else if (conceptoUpper === 'OPERACION TRANSFERENCIA') {
+    } else if (conceptoNorm === 'OPERACION TRANSFERENCIA') {
       aggregated.trxSales += row.monto;
       aggregated.totalSales += row.monto;
     }

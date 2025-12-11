@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../web4-backend"
+		},
+		{
+			"path": "../web4-frontend"
+		}
+	],
+	"settings": {}
+}
