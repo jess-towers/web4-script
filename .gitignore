@@ -22,3 +22,5 @@ build/
 prisma/generated/
 
 Script transacciones.rar
+
+*.rar
