@@ -66,14 +66,15 @@ function cleanComercioId(comercioIdString: string): number | null {
 
 /**
  * @function processCsvData
- * @description Procesa el contenido de un CSV, agrega transacciones por PV y fecha,
- * y las valida antes de la inserción en la base de datos.
+ * @description Procesa el contenido de un CSV, agrega transacciones por PV y fecha.
+ * Filtra PDVs ignorados pero NO valida existencia (se hace en main.ts después de consolidar).
  * @param csvContent El contenido del archivo CSV como una cadena.
- * @param prisma La instancia de PrismaClient para validaciones de BD.
+ * @param prisma La instancia de PrismaClient (mantenido para compatibilidad, pero no se usa para validaciones).
+ * @param ignoredPdvs Set opcional de PDVs a ignorar (filtra sus transacciones).
  * @returns Una Promesa que resuelve a un array de AggregatedDailySales listos para DB.
- * @throws {Error} Si hay errores de formato, PVs inexistentes o fallos de agregación.
+ * @throws {Error} Si hay errores de formato o fallos de agregación.
  */
-export async function processCsvData(csvContent: string, prisma: PrismaClient): Promise<AggregatedDailySales[]> {
+export async function processCsvData(csvContent: string, prisma: PrismaClient, ignoredPdvs?: Set<number>): Promise<AggregatedDailySales[]> {
   const records: RawCsvRow[] = [];
   const aggregationMap = new Map<string, AggregatedDailySales>();
   const uniquePoSIdsInCsv = new Set<number>();
@@ -224,31 +225,17 @@ export async function processCsvData(csvContent: string, prisma: PrismaClient): 
     }
   }
 
-  // VALIDACIÓN 3: Verificar que todos los Puntos de Venta existan en la BD
-  if (uniquePoSIdsInCsv.size > 0) {
-    const existingPoS = await prisma.pointOfSale.findMany({
-      where: {
-        pointNumberId: {
-          in: Array.from(uniquePoSIdsInCsv)
-        }
-      },
-      select: {
-        pointNumberId: true
-      }
-    });
+  // NOTA: El filtrado de PDVs ignorados se hace en main.ts DESPUÉS de validar existencia
+  // según la Regla de Oro: Si existe en BD -> se procesa (incluso si está ignorado)
+  // Si no existe en BD y está ignorado -> se filtra
+  // Si no existe en BD y NO está ignorado -> error
 
-    const existingPoSIds = new Set(existingPoS.map(pos => pos.pointNumberId));
-    const nonExistingPoS = Array.from(uniquePoSIdsInCsv).filter(id => !existingPoSIds.has(id));
-
-    if (nonExistingPoS.length > 0) {
-      throw new Error(`Los siguientes Puntos de Venta del CSV no existen en la base de datos: ${nonExistingPoS.join(', ')}. Ningún dato será insertado.`);
-    }
-  } else {
-    // Esto solo ocurriría si el CSV no tiene datos o no tiene PVs válidos
+  if (aggregationMap.size === 0) {
+    // Esto solo ocurriría si el CSV no tiene datos válidos
     throw new Error('No se encontraron Puntos de Venta válidos en el archivo CSV para procesar.');
   }
 
-  // VALIDACIÓN 4: Verificar que no existan registros duplicados en la BD
+  // Preparar resultado final (las validaciones de existencia y duplicados en BD se hacen en main.ts)
   const result: AggregatedDailySales[] = Array.from(aggregationMap.values()).map(data => ({
     ...data,
     qrSales: parseFloat(data.qrSales.toFixed(2)),
@@ -256,31 +243,6 @@ export async function processCsvData(csvContent: string, prisma: PrismaClient): 
     creditSales: parseFloat(data.creditSales.toFixed(2)),
     totalSales: parseFloat(data.totalSales.toFixed(2)),
   }));
-
-  // Verificar duplicados en la BD antes de insertar
-  const existingRecords = await prisma.dailySales.findMany({
-    where: {
-      OR: result.map(data => ({
-        pointOfSaleId: data.pointOfSaleId,
-        date: data.date
-      }))
-    },
-    select: {
-      pointOfSaleId: true,
-      date: true
-    }
-  });
-
-  if (existingRecords.length > 0) {
-    const duplicateDates = existingRecords.map(record => {
-      const year = record.date.getUTCFullYear();
-      const month = String(record.date.getUTCMonth() + 1).padStart(2, '0');
-      const day = String(record.date.getUTCDate()).padStart(2, '0');
-      const formattedDate = `${year}-${month}-${day}`;
-      return `${record.pointOfSaleId} - ${formattedDate}`;
-    });
-    throw new Error(`Se encontraron registros existentes en la base de datos para las siguientes fechas y puntos de venta:\n${duplicateDates.join('\n')}\n\nEl proceso ha sido cancelado para evitar duplicados.`);
-  }
 
   result.sort((a, b) => {
     if (a.pointOfSaleId !== b.pointOfSaleId) {

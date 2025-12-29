@@ -139,10 +139,11 @@ function extractTextFromElement(element: any): string {
  * @function processHtmlCsvData
  * @description Procesa el contenido HTML (tabla) y agrega datos por PV y fecha.
  * @param htmlContent El contenido HTML como string (contiene una tabla).
+ * @param ignoredPdvs Set opcional de PDVs a ignorar (no lanzará error si están en esta lista).
  * @returns Una Promesa que resuelve a un array de AggregatedDailySales listos para DB.
  * @throws {Error} Si hay errores de formato, parsing o agregación.
  */
-export async function processHtmlCsvData(htmlContent: string): Promise<AggregatedDailySalesHtml[]> {
+export async function processHtmlCsvData(htmlContent: string, ignoredPdvs?: Set<number>): Promise<AggregatedDailySalesHtml[]> {
   const rows: HtmlTableRow[] = [];
   const aggregationMap = new Map<string, AggregatedDailySalesHtml>();
 
