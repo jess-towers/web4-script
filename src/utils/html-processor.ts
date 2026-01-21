@@ -73,16 +73,24 @@ function parseDateString(dateString: string): Date | null {
 /**
  * @function parseMonto
  * @description Parsea una cadena de monto en formato argentino/europeo (ej. "1.500,50") a un número.
- * Elimina los puntos de miles y reemplaza la coma decimal por punto.
+ * Elimina símbolos de moneda, letras y espacios, luego elimina los puntos de miles y reemplaza la coma decimal por punto.
  * @param montoString La cadena de monto.
  * @returns El monto como número, o NaN si el parseo falla.
  */
 function parseMonto(montoString: string): number {
+  // Paso 0: Si el string es nulo o vacío, retornar NaN
   if (!montoString || !montoString.trim()) return NaN;
-  // Eliminar todos los puntos (separadores de miles)
-  const withoutThousands = montoString.replace(/\./g, '');
-  // Reemplazar la coma decimal por un punto
+  
+  // Paso 1: Limpiar el string eliminando cualquier caracter que NO sea número, punto, coma o guion
+  const sanitized = montoString.replace(/[^0-9.,-]/g, '');
+  
+  // Paso 2: Eliminar todos los puntos (separadores de miles)
+  const withoutThousands = sanitized.replace(/\./g, '');
+  
+  // Paso 3: Reemplazar la coma decimal por un punto (formato estándar de JS)
   const cleaned = withoutThousands.replace(',', '.');
+  
+  // Paso 4: Retornar el parseFloat del resultado
   return parseFloat(cleaned);
 }
 
