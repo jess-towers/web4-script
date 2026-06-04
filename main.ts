@@ -475,7 +475,7 @@ ipcMain.on('process-html-csv', async (event, files: { name: string; content: str
             validTransactionsCount: data.validTransactionsCount,
             qrSales: data.qrSales,
             debitSales: data.debitSales,
-            creditSales: 0, // Siempre 0 para este flujo
+            creditSales: data.creditSales,
             trxSales: (data as any).trxSales || 0, // Nueva columna para transferencias
             totalSales: data.totalSales,
             createdAt: new Date(),

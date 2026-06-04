@@ -16,7 +16,7 @@ interface AggregatedDailySalesHtml extends AggregatedDailySales {
  * @description Representa una fila de la tabla HTML parseada
  */
 interface HtmlTableRow {
-  fecha: string;        // Columna B (índice 1): DD/MM/YYYY
+  fecha: string;        // Columna C (índice 2): FechaCarga DD/MM/YYYY
   pdv: number;          // Columna E (índice 4): Número de Punto de Venta
   concepto: string;     // Columna F (índice 5): Concepto/Tipo
   monto: number;        // Columna H (índice 7): Monto como número
@@ -235,14 +235,20 @@ export async function processHtmlCsvData(htmlContent: string, ignoredPdvs?: Set<
     // Extraer texto de cada celda
     const cellTexts = cells.map(cell => extractTextFromElement(cell).trim());
     
-    // Columna B (índice 1): Fecha
-    const fechaString = cellTexts[1] || '';
+    // Columna C (índice 2): Fecha (FechaCarga)
+    const fechaString = cellTexts[2] || '';
     // Columna E (índice 4): PDV
     const pdvString = cellTexts[4] || '';
     // Columna F (índice 5): Concepto
     const concepto = cellTexts[5] || '';
     // Columna H (índice 7): Monto
     const montoString = cellTexts[7] || '';
+    
+    // Validar estrictamente que el PDV tenga exactamente 6 dígitos numéricos
+    const pdvLimpio = pdvString.trim();
+    if (!/^\d{6}$/.test(pdvLimpio)) {
+      continue; // Saltar filas donde el PDV no sea de 6 dígitos exactos
+    }
     
     // Validar que tengamos datos mínimos
     if (!fechaString || !pdvString || !montoString) {
@@ -306,32 +312,35 @@ export async function processHtmlCsvData(htmlContent: string, ignoredPdvs?: Set<
     // Clasificar según el concepto
     const conceptoNorm = normalizeText(row.concepto);
     
-    if (conceptoNorm.includes('OPERACION COBRO QR') || conceptoNorm.includes('QR MAX')) {
+    if (conceptoNorm === 'OPERACION COBRO QR' || conceptoNorm === 'OPERACION COBRO QR MAX') {
       aggregated.qrSales += row.monto;
       aggregated.totalSales += row.monto;
-    } else if (conceptoNorm === 'OPERACION TARJETA DEBITO (PRISMA-WEB)') {
+    } else if (conceptoNorm === 'OPERACION COBRO QR MAX DEBITO') {
       aggregated.debitSales += row.monto;
+      aggregated.totalSales += row.monto;
+    } else if (conceptoNorm === 'OPERACION TARJETA DEBITO (PRISMA-WEB)') {
+      aggregated.creditSales += row.monto;
       aggregated.totalSales += row.monto;
     } else if (conceptoNorm === 'OPERACION TRANSFERENCIA') {
       aggregated.trxSales += row.monto;
       aggregated.totalSales += row.monto;
     }
-    // Si no coincide con ninguna categoría conocida, no se suma a ninguna categoría ni a totalSales
   }
 
   // Preparar resultado final
   const result: AggregatedDailySalesHtml[] = Array.from(aggregationMap.values()).map(data => {
     const qrSales = parseFloat(data.qrSales.toFixed(2));
     const debitSales = parseFloat(data.debitSales.toFixed(2));
+    const creditSales = parseFloat(data.creditSales.toFixed(2));
     const trxSales = parseFloat(data.trxSales.toFixed(2));
-    // Recalcular totalSales como suma exacta de las categorías
-    const totalSales = parseFloat((qrSales + debitSales + trxSales).toFixed(2));
+    // Recalcular totalSales como suma exacta de las cuatro categorías
+    const totalSales = parseFloat((qrSales + debitSales + creditSales + trxSales).toFixed(2));
     
     return {
       ...data,
       qrSales,
       debitSales,
-      creditSales: 0, // Siempre 0 para este procesador
+      creditSales,
       trxSales,
       totalSales,
     };
