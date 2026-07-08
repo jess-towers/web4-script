@@ -73,6 +73,26 @@ contextBridge.exposeInMainWorld('electronAPI', {
    */
   setIgnoredPdvsBanco: (pdvs: number[]): Promise<boolean> => {
     return ipcRenderer.invoke('set-ignored-pdvs-banco', pdvs);
-  }
+  },
+
+  /**
+   * Envía los archivos XLSX de Vendedores (Rapi y Express) al proceso principal.
+   * @param files Objeto con { rapi: { name, content }, express: { name, content } }.
+   *              El content debe ser una cadena binaria (FileReader.readAsBinaryString).
+   */
+  sendSellersFiles: (files: {
+    rapi: { name: string; content: string };
+    express: { name: string; content: string };
+  }) => {
+    ipcRenderer.send('process-sellers-xlsx', files);
+  },
+
+  /**
+   * Escucha el resultado del procesamiento de Vendedores desde el proceso principal.
+   * @param callback Función a ejecutar con { success: boolean, message: string, details?: string }.
+   */
+  onSellersResult: (callback: (result: { success: boolean; message: string; details?: string }) => void) => {
+    ipcRenderer.on('sellers-processing-result', (_event, result) => callback(result));
+  },
 });
 

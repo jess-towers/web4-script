@@ -74,3 +74,27 @@ model UserPointOfSale {
   @@unique([userId, pointOfSaleId]) // Restricción de unicidad para la asignación
 }
 
+enum SellerProvider {
+  RAPI
+  EXPRESS
+}
+
+model SellerSnapshot {
+  id          Int            @id @default(autoincrement())
+  sellerName  String
+  provider    SellerProvider
+  comQr       Float          @default(0)
+  comDebit    Float          @default(0)
+  comTrx      Float          @default(0)
+  comPrisma   Float          @default(0)
+  comDepos    Float          @default(0)
+  salesQr     Float          @default(0)
+  salesDebit  Float          @default(0)
+  salesTrx    Float          @default(0)
+  salesPrisma Float          @default(0)
+  salesDepos  Float          @default(0)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@unique([sellerName, provider])
+}

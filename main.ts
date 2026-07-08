@@ -17,6 +17,7 @@ import { prisma, disconnectPrisma } from './src/config/prisma-client'; // Usar l
 import { processCsvData } from './src/utils/csv-aggregator'; // Tu lógica de agregación
 import { processHtmlCsvData } from './src/utils/html-processor'; // Procesador HTML para archivos Banco
 import { AggregatedDailySales } from './src/types/csv.types';
+import { parseRapiXlsx, parseExpressXlsx, mergeSellerData } from './src/utils/xlsx-parser';
 
 let mainWindow: BrowserWindow | null;
 
@@ -510,3 +511,66 @@ ipcMain.on('process-html-csv', async (event, files: { name: string; content: str
     event.sender.send('html-processing-result', result);
   }
 });
+
+/**
+ * @function handleProcessSellersXlsx
+ * @description Procesa 2 archivos XLSX (Rapi + Express), los combina por vendedor
+ * y reemplaza por completo el snapshot en la tabla SellerSnapshot.
+ */
+ipcMain.on(
+  'process-sellers-xlsx',
+  async (
+    event,
+    files: { rapi: { name: string; content: string }; express: { name: string; content: string } },
+  ) => {
+    console.log('Received seller XLSX files for processing.');
+
+    let result: { success: boolean; message: string; details?: string } = {
+      success: false,
+      message: 'Ocurrió un error inesperado.',
+    };
+
+    try {
+      if (!files?.rapi?.content || !files?.express?.content) {
+        result = { success: false, message: 'Se requieren ambos archivos (Rapi y Express).' };
+        event.sender.send('sellers-processing-result', result);
+        return;
+      }
+
+      // 1. Parsear archivos
+      const rapiRows    = parseRapiXlsx(files.rapi.content);
+      const expressRows = parseExpressXlsx(files.express.content);
+
+      if (rapiRows.length === 0 && expressRows.length === 0) {
+        result = { success: false, message: 'No se encontraron datos válidos en los archivos.' };
+        event.sender.send('sellers-processing-result', result);
+        return;
+      }
+
+      // 2. Combinar
+      const rows = mergeSellerData(rapiRows, expressRows);
+
+      // 3. Reemplazar snapshot: truncar + insertar en bloque
+      await prisma.$transaction(async (tx) => {
+        await tx.sellerSnapshot.deleteMany({});
+        await tx.sellerSnapshot.createMany({ data: rows });
+      });
+
+      result = {
+        success: true,
+        message: `Vendedores actualizados correctamente. ${rapiRows.length} vendedor(es) de Rapi, ${expressRows.length} de Express. Total de filas insertadas: ${rows.length}.`,
+      };
+      console.log('Seller XLSX processing successful.');
+
+    } catch (error: any) {
+      console.error('Error durante el procesamiento de vendedores:', error);
+      result = {
+        success: false,
+        message: `Error al procesar los archivos: ${error.message || 'Error desconocido.'}`,
+        details: error.stack,
+      };
+    } finally {
+      event.sender.send('sellers-processing-result', result);
+    }
+  },
+);

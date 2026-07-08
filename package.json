@@ -30,7 +30,8 @@
     "dotenv": "^16.4.5",
     "electron-store": "^8.1.0",
     "htmlparser2": "^10.0.0",
-    "prisma": "^6.10.1"
+    "prisma": "^6.10.1",
+    "xlsx": "^0.18.5"
   },
   "build": {
     "appId": "com.tortuga.csvprocessor",
