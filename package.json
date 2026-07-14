@@ -1,5 +1,5 @@
 {
-  "name": "tortuga-csv-processor",
+  "name": "web4-script",
   "version": "1.0.0",
   "description": "Aplicación de escritorio para procesar CSV de transacciones y cargar a DailySales.",
   "main": "dist/main.js",
@@ -34,8 +34,8 @@
     "xlsx": "^0.18.5"
   },
   "build": {
-    "appId": "com.tortuga.csvprocessor",
-    "productName": "WEB4-CargaTransacciones",
+    "appId": "com.web4.app",
+    "productName": "web4",
     "directories": {
       "output": "release"
     },
@@ -44,13 +44,12 @@
       "index.html",
       "prisma/schema.prisma",
       "src/config/prisma-client.ts",
-      "src/icon/Group 10.svg",
-      "src/icon/Group-10.ico"
+      "src/icon/web4-icon.ico"
     ],
-    "icon": "src/icon/Group-10.ico",
+    "icon": "src/icon/web4-icon.ico",
     "win": {
       "target": "nsis",
-      "icon": "src/icon/Group-10.ico"
+      "icon": "src/icon/web4-icon.ico"
     },
     "nsis": {
       "oneClick": false,

@@ -45,7 +45,8 @@ function createWindow(): void {
       contextIsolation: true,
       sandbox: false,
     },
-    icon: path.join(__dirname, 'src', 'icon', 'Group-10.ico'),
+    icon: path.join(__dirname, 'src', 'icon', 'web4-icon.ico'),
+    title: 'web4',
     // Eliminar la barra de menú
     autoHideMenuBar: true,
     // Ocultar completamente la barra de menú
