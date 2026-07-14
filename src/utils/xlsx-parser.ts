@@ -3,7 +3,7 @@ import * as XLSX from 'xlsx';
 // ─── Normalización ───────────────────────────────────────────────────────────
 
 /**
- * Genera la clave de deduplicación: minúsculas, sin tildes, sin espacios extra.
+ * Genera la clave de deduplicación: minúsculas, sin tildes, sin puntos, sin espacios extra.
  */
 export function normalizeKey(name: string): string {
   return name
@@ -11,7 +11,8 @@ export function normalizeKey(name: string): string {
     .replace(/\s+/g, ' ')
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '');
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/\./g, '');
 }
 
 /**
@@ -77,6 +78,25 @@ function findColIdx(headers: string[], needle: string): number {
   return headers.findIndex((h) => normalizeKey(String(h ?? '')) === needleNorm);
 }
 
+/**
+ * Busca el índice de una columna probando una lista de nombres candidatos en
+ * orden (para tolerar variantes de encabezado entre distintas versiones del
+ * archivo del proveedor). Devuelve el índice del primer candidato encontrado,
+ * o -1 si ninguno matchea.
+ */
+function findColIdxAny(headers: string[], candidates: string[]): number {
+  for (const candidate of candidates) {
+    const idx = findColIdx(headers, candidate);
+    if (idx !== -1) return idx;
+  }
+  return -1;
+}
+
+function isTotalsRow(rawName: string): boolean {
+  const key = normalizeKey(rawName);
+  return key === 'total' || key === 'totales';
+}
+
 // ─── Parsers ─────────────────────────────────────────────────────────────────
 
 /**
@@ -101,22 +121,33 @@ export function parseRapiXlsx(binaryContent: string): RapiRow[] {
   const iComDebit  = findColIdx(headers, 'Com. Débito');
   const iComTrx    = findColIdx(headers, 'Com. TRX');
   const iComPrisma = findColIdx(headers, 'Com. Prisma');
-  // "Depósitos" puede venir como "Com. Depós.", "Com. Depos.", "Com. Depositos", etc.
-  const iComDepos  = findColIdx(headers, 'Com. Depós.') !== -1
-    ? findColIdx(headers, 'Com. Depós.')
-    : findColIdx(headers, 'Com. Depos.');
+  // "Depósitos" puede venir como "Com. Depósitos", "Com. Depós.", "Com. Depos.", etc.
+  const iComDepos  = findColIdxAny(headers, ['Com. Depósitos', 'Com. Depós.', 'Com. Depos.']);
 
   const iSalesQr     = findColIdx(headers, 'Ventas QR');
   const iSalesDebit  = findColIdx(headers, 'Ventas DEB');
   const iSalesTrx    = findColIdx(headers, 'Ventas TRX');
   const iSalesPrisma = findColIdx(headers, 'Ventas Prisma');
-  const iSalesDepos  = findColIdx(headers, 'Ventas Depós.') !== -1
-    ? findColIdx(headers, 'Ventas Depós.')
-    : findColIdx(headers, 'Ventas Depos.');
+  // El proveedor renombró esta columna a "Depós. Enviados"; se conservan los
+  // nombres anteriores como fallback por compatibilidad con archivos viejos.
+  const iSalesDepos  = findColIdxAny(headers, ['Depós. Enviados', 'Ventas Depós.', 'Ventas Depos.']);
 
-  if (iVendedor === -1) {
+  const missingColumns: string[] = [];
+  if (iVendedor === -1) missingColumns.push('Vendedor');
+  if (iComQr === -1) missingColumns.push('Com. QR');
+  if (iComDebit === -1) missingColumns.push('Com. Débito');
+  if (iComTrx === -1) missingColumns.push('Com. TRX');
+  if (iComPrisma === -1) missingColumns.push('Com. Prisma');
+  if (iComDepos === -1) missingColumns.push('Com. Depósitos');
+  if (iSalesQr === -1) missingColumns.push('Ventas QR');
+  if (iSalesDebit === -1) missingColumns.push('Ventas DEB');
+  if (iSalesTrx === -1) missingColumns.push('Ventas TRX');
+  if (iSalesPrisma === -1) missingColumns.push('Ventas Prisma');
+  if (iSalesDepos === -1) missingColumns.push('Depós. Enviados');
+
+  if (missingColumns.length > 0) {
     throw new Error(
-      'Rapi: no se encontró la columna "Vendedor". Verificar que los encabezados estén en la fila 2.',
+      `Rapi: no se encontraron las siguientes columnas en la fila 2 de encabezados: ${missingColumns.join(', ')}.`,
     );
   }
 
@@ -126,6 +157,7 @@ export function parseRapiXlsx(binaryContent: string): RapiRow[] {
     const arr = row as unknown[];
     const rawName = String(arr[iVendedor] ?? '').trim();
     if (!rawName) continue;
+    if (isTotalsRow(rawName)) continue;
 
     results.push({
       sellerName: toDisplayName(rawName),
@@ -168,8 +200,15 @@ export function parseExpressXlsx(binaryContent: string): ExpressRow[] {
   const kComQr    = findKey('Total Comis QR');
   const kSalesQr  = findKey('Total Ventas QR');
 
-  if (!kVendedor) {
-    throw new Error('Express: no se encontró la columna "Vendedor".');
+  const missingColumns: string[] = [];
+  if (!kVendedor) missingColumns.push('Vendedor');
+  if (!kComQr) missingColumns.push('Total Comis QR');
+  if (!kSalesQr) missingColumns.push('Total Ventas QR');
+
+  if (missingColumns.length > 0) {
+    throw new Error(
+      `Express: no se encontraron las siguientes columnas en la fila 1 de encabezados: ${missingColumns.join(', ')}.`,
+    );
   }
 
   const results: ExpressRow[] = [];
@@ -177,6 +216,7 @@ export function parseExpressXlsx(binaryContent: string): ExpressRow[] {
   for (const row of rows) {
     const rawName = String(row[kVendedor] ?? '').trim();
     if (!rawName) continue;
+    if (isTotalsRow(rawName)) continue;
 
     results.push({
       sellerName: toDisplayName(rawName),
