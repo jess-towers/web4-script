@@ -152,12 +152,21 @@ export function parseRapiXlsx(binaryContent: string): RapiRow[] {
   }
 
   const results: RapiRow[] = [];
+  const seenKeys = new Set<string>();
+  const duplicateNames: string[] = [];
 
   for (const row of dataRows) {
     const arr = row as unknown[];
     const rawName = String(arr[iVendedor] ?? '').trim();
     if (!rawName) continue;
     if (isTotalsRow(rawName)) continue;
+
+    const key = normalizeKey(rawName);
+    if (seenKeys.has(key)) {
+      duplicateNames.push(toDisplayName(rawName));
+      continue;
+    }
+    seenKeys.add(key);
 
     results.push({
       sellerName: toDisplayName(rawName),
@@ -172,6 +181,12 @@ export function parseRapiXlsx(binaryContent: string): RapiRow[] {
       salesPrisma:toFloat(iSalesPrisma >= 0 ? arr[iSalesPrisma] : 0),
       salesDepos: toFloat(iSalesDepos  >= 0 ? arr[iSalesDepos]  : 0),
     });
+  }
+
+  if (duplicateNames.length > 0) {
+    throw new Error(
+      `El archivo Rapi contiene vendedores duplicados: ${duplicateNames.join(', ')}. Unifique los montos en el Excel antes de cargarlo.`,
+    );
   }
 
   return results;
@@ -212,17 +227,32 @@ export function parseExpressXlsx(binaryContent: string): ExpressRow[] {
   }
 
   const results: ExpressRow[] = [];
+  const seenKeys = new Set<string>();
+  const duplicateNames: string[] = [];
 
   for (const row of rows) {
     const rawName = String(row[kVendedor] ?? '').trim();
     if (!rawName) continue;
     if (isTotalsRow(rawName)) continue;
 
+    const key = normalizeKey(rawName);
+    if (seenKeys.has(key)) {
+      duplicateNames.push(toDisplayName(rawName));
+      continue;
+    }
+    seenKeys.add(key);
+
     results.push({
       sellerName: toDisplayName(rawName),
       comQr:   toFloat(kComQr   ? row[kComQr]   : 0),
       salesQr: toFloat(kSalesQr ? row[kSalesQr] : 0),
     });
+  }
+
+  if (duplicateNames.length > 0) {
+    throw new Error(
+      `El archivo Express contiene vendedores duplicados: ${duplicateNames.join(', ')}. Unifique los montos en el Excel antes de cargarlo.`,
+    );
   }
 
   return results;

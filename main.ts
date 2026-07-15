@@ -307,8 +307,7 @@ ipcMain.on('process-csv', async (event, files: { name: string; content: string }
     console.error('Error durante el procesamiento del CSV o la operación de base de datos:', error);
     result = {
       success: false,
-      message: `Error al procesar los archivos: ${error.message || 'Error desconocido.'}`,
-      details: error.stack || 'No hay detalles de stack disponibles.'
+      message: `Error al procesar los archivos: ${error.message || 'Error desconocido.'}`
     };
   } finally {
     event.sender.send('processing-result', result);
@@ -505,8 +504,7 @@ ipcMain.on('process-html-csv', async (event, files: { name: string; content: str
     console.error('Error durante el procesamiento del HTML CSV o la operación de base de datos:', error);
     result = {
       success: false,
-      message: `Error al procesar los archivos: ${error.message || 'Error desconocido.'}`,
-      details: error.stack || 'No hay detalles de stack disponibles.'
+      message: `Error al procesar los archivos: ${error.message || 'Error desconocido.'}`
     };
   } finally {
     event.sender.send('html-processing-result', result);
@@ -568,7 +566,6 @@ ipcMain.on(
       result = {
         success: false,
         message: `Error al procesar los archivos: ${error.message || 'Error desconocido.'}`,
-        details: error.stack,
       };
     } finally {
       event.sender.send('sellers-processing-result', result);

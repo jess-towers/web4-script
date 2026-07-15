@@ -567,7 +567,7 @@
                                 class="w-1/2 px-6 py-3 rounded-md bg-indigo-600 text-white font-bold text-lg
                                        hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500
                                        transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">
-                            Cargar Vendedores
+                            Cargar datos
                         </button>
                     </div>
 
@@ -1170,7 +1170,6 @@
                     selectedRapiFileName.textContent = 'Error al leer el archivo.';
                     showStatusMessageSellers(err.message, 'error');
                 }
-                updateSellersButtonState();
             });
 
             selectExpressFileButton.addEventListener('click', () => {
@@ -1189,12 +1188,11 @@
                     selectedExpressFileName.textContent = 'Error al leer el archivo.';
                     showStatusMessageSellers(err.message, 'error');
                 }
-                updateSellersButtonState();
             });
 
             processSellersButton.addEventListener('click', () => {
                 if (!rapiFile || !expressFile) {
-                    showStatusMessageSellers('Debe seleccionar ambos archivos antes de procesar.', 'error');
+                    showStatusMessageSellers('Debe seleccionar ambos archivos (Rapi y Express) para cargar los datos.', 'error');
                     return;
                 }
                 processSellersButton.disabled = true;
@@ -1215,7 +1213,6 @@
             // ========== INICIALIZACIÓN ==========
             processButton.disabled = true;
             processHtmlButton.disabled = true;
-            processSellersButton.disabled = true;
 
         </script>
     </body>
