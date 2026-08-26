@@ -7,17 +7,17 @@ console.log('🔧 Configurando Tortuga Script para producción...\n');
 
 // Verificar si existe el archivo .env
 const envPath = path.join(__dirname, '.env');
-const envExamplePath = path.join(__dirname, 'env.example');
+const envExamplePath = path.join(__dirname, '.env.example');
 
 if (!fs.existsSync(envPath)) {
-  console.log('📝 Creando archivo .env desde env.example...');
+  console.log('📝 Creando archivo .env desde .env.example...');
   
   if (fs.existsSync(envExamplePath)) {
     const envContent = fs.readFileSync(envExamplePath, 'utf8');
     fs.writeFileSync(envPath, envContent);
     console.log('✅ Archivo .env creado exitosamente');
   } else {
-    console.log('❌ No se encontró el archivo env.example');
+    console.log('❌ No se encontró el archivo .env.example');
     process.exit(1);
   }
 } else {

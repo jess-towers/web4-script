@@ -4,13 +4,17 @@ import { app, BrowserWindow, ipcMain } from 'electron';
 import * as path from 'path';
 import Store from 'electron-store';
 
-// Cargar variables de entorno según el entorno de ejecución
-if (app.isPackaged) {
-  // En producción, cargar desde el directorio de recursos
-  require('dotenv').config({ path: path.join(process.resourcesPath, '.env') });
-} else {
-  // En desarrollo, cargar desde la raíz del proyecto
-  require('dotenv').config();
+// Cargar variables de entorno según el entorno de ejecución.
+// Tiene que ocurrir ANTES de importar prisma-client, porque ese módulo instancia
+// PrismaClient al cargarse y ahí ya lee DATABASE_URL. TypeScript conserva este
+// orden al compilar (el require de abajo queda después de estas líneas).
+const { loadEnv, describeDatabaseTarget } = require('./src/config/load-env');
+const envInfo = loadEnv(app.isPackaged ? process.resourcesPath : undefined);
+
+console.log(`[env] archivos leídos: ${envInfo.files.join(', ') || 'ninguno'}`);
+console.log(`[env] base de datos destino: ${describeDatabaseTarget()}`);
+if (envInfo.usingLocalOverride) {
+  console.log('[env] usando .env.local — NO se está tocando la base de producción.');
 }
 
 import { prisma, disconnectPrisma } from './src/config/prisma-client'; // Usar la nueva configuración
