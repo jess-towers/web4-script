@@ -22,16 +22,16 @@
       .then(() => {
         // Se informa siempre el destino (sin credenciales): esta app escribe
         // directo en la base, y confundir la local con la de producción sale caro.
-        console.log(`✅ Conexión establecida con la base: ${describeDatabaseTarget()}`);
+        console.log(`[db] OK - conexion establecida con la base: ${describeDatabaseTarget()}`);
       })
       .catch((error) => {
-        console.error('❌ Error al conectar con la base de datos:', error);
+        console.error('[db] ERROR al conectar con la base de datos:', error);
       });
 
     // Función para desconectar de forma limpia
     export const disconnectPrisma = async () => {
       await prisma.$disconnect();
-      console.log('🔌 Desconectado de la base de datos');
+      console.log('[db] desconectado de la base de datos');
     };
 
     // Puedes añadir una función para desconectar si fuera necesario al cerrar la app

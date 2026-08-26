@@ -11,10 +11,10 @@ import Store from 'electron-store';
 const { loadEnv, describeDatabaseTarget } = require('./src/config/load-env');
 const envInfo = loadEnv(app.isPackaged ? process.resourcesPath : undefined);
 
-console.log(`[env] archivos leídos: ${envInfo.files.join(', ') || 'ninguno'}`);
+console.log(`[env] archivos leidos: ${envInfo.files.join(', ') || 'ninguno'}`);
 console.log(`[env] base de datos destino: ${describeDatabaseTarget()}`);
 if (envInfo.usingLocalOverride) {
-  console.log('[env] usando .env.local — NO se está tocando la base de producción.');
+  console.log('[env] usando .env.local -> NO se esta tocando la base de produccion.');
 }
 
 import { prisma, disconnectPrisma } from './src/config/prisma-client'; // Usar la nueva configuración
@@ -81,10 +81,10 @@ function createWindow(): void {
 app.whenReady().then(async () => {
   try {
     // La conexión ya se maneja en prisma-client.ts
-    console.log('Aplicación iniciada correctamente.');
+    console.log('Aplicacion iniciada correctamente.');
   } catch (error) {
-    console.error('Error al inicializar la aplicación:', error);
-    console.error('Error de Inicialización: No se pudo inicializar la aplicación. Por favor, verifica tu archivo .env y que la base de datos esté accesible.');
+    console.error('Error al inicializar la aplicacion:', error);
+    console.error('Error de inicializacion: no se pudo inicializar la aplicacion. Verifica tu archivo .env y que la base de datos este accesible.');
     app.quit();
     return;
   }
@@ -308,7 +308,7 @@ ipcMain.on('process-csv', async (event, files: { name: string; content: string }
     console.log('CSV processing and DB insert successful.');
 
   } catch (error: any) {
-    console.error('Error durante el procesamiento del CSV o la operación de base de datos:', error);
+    console.error('Error durante el procesamiento del CSV o la operacion de base de datos:', error);
     result = {
       success: false,
       message: `Error al procesar los archivos: ${error.message || 'Error desconocido.'}`
@@ -505,7 +505,7 @@ ipcMain.on('process-html-csv', async (event, files: { name: string; content: str
     console.log('HTML CSV processing and DB insert successful.');
 
   } catch (error: any) {
-    console.error('Error durante el procesamiento del HTML CSV o la operación de base de datos:', error);
+    console.error('Error durante el procesamiento del HTML CSV o la operacion de base de datos:', error);
     result = {
       success: false,
       message: `Error al procesar los archivos: ${error.message || 'Error desconocido.'}`
